@@ -19,7 +19,7 @@ async fn main() {
         .route("/download", get(handler))
         .nest("/videos", videos_service);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 4000));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 4000));
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
