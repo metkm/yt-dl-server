@@ -48,10 +48,12 @@ async fn handle_socket(mut socket: ws::WebSocket) {
             .arg(url)
             .arg("--no-simulate")
             .arg("--no-part")
+            .arg("--q")
             .args(["-S", "res,ext:mp4:m4a"])
             .args(["--recode", "mp4"])
             .args(["--paths", &format!("{}/videos", env::current_dir().unwrap().to_string_lossy())])
             .args(["--print", "after_move:[downloaded]:%(id)s.%(ext)s"])
+            .args(["--print", "before_dl:[downloading]:%(id)s.%(ext)s"])
             .args(["--output", "%(id)s.%(ext)s"])
             .stdout(Stdio::piped())
             .spawn()
@@ -91,6 +93,4 @@ async fn handle_socket(mut socket: ws::WebSocket) {
 
         break;
     }
-
-    socket.close().await.ok();
 }
