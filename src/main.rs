@@ -1,23 +1,33 @@
-use std::io::{BufReader, BufRead};
+use std::io::{BufReader, BufRead, Error};
 use std::net::SocketAddr;
 use std::process::{Command, Stdio};
+use std::env;
 
 use axum;
 use axum::extract::ws;
-use axum::response::Response;
-use axum::routing::{Router, get};
+use axum::http::StatusCode;
+use axum::response::{Response, IntoResponse};
+use axum::routing::{Router, get, get_service};
 
+use tower_http::services::ServeDir;
 
 #[tokio::main]
 async fn main() {
+    let videos_service = get_service(ServeDir::new("./videos")).handle_error(handle_error);
+
     let app = Router::new()
-        .route("/download", get(handler));
+        .route("/download", get(handler))
+        .nest("/videos", videos_service);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 4000));
     axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await
         .unwrap()
+}
+
+async fn handle_error(_err: Error) -> impl IntoResponse {
+    (StatusCode::INTERNAL_SERVER_ERROR, "Something went wrong...")
 }
 
 async fn handler(ws: ws::WebSocketUpgrade) -> Response {
@@ -40,6 +50,7 @@ async fn handle_socket(mut socket: ws::WebSocket) {
             .arg("--no-part")
             .args(["-S", "res,ext:mp4:m4a"])
             .args(["--recode", "mp4"])
+            .args(["--paths", &format!("{}/videos", env::current_dir().unwrap().to_string_lossy())])
             .args(["--print", "after_move:[downloaded]:%(id)s.%(ext)s"])
             .args(["--output", "%(id)s.%(ext)s"])
             .stdout(Stdio::piped())
