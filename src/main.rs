@@ -36,6 +36,9 @@ async fn handle_socket(mut socket: ws::WebSocket) {
 
         let mut yt_dlp = Command::new("yt-dlp")
             .arg(url)
+            .arg("--no-simulate")
+            .args(["--print", "[downloaded]:%(id)s.%(ext)s"])
+            .args(["--output", "%(id)s.%(ext)s"])
             .stdout(Stdio::piped())
             .spawn()
             .expect("Can't create the yt-dlp process");
@@ -62,7 +65,7 @@ async fn handle_socket(mut socket: ws::WebSocket) {
                 },
                 Ok(None) => {
                     let trimmed = line.trim().to_string();
-                    socket.send(ws::Message::Text(trimmed)).await;
+                    socket.send(ws::Message::Text(trimmed)).await.ok();
                     line.clear();
                 }
                 Err(code) => {
@@ -71,5 +74,9 @@ async fn handle_socket(mut socket: ws::WebSocket) {
                 }
             }
         }
+
+        break;
     }
+
+    socket.close().await.ok();
 }
