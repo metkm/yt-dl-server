@@ -49,12 +49,14 @@ async fn handle_socket(mut socket: ws::WebSocket) {
             .arg("--no-simulate")
             .arg("--no-part")
             .arg("--q")
+            .arg("--write-thumbnail")
             .args(["-S", "res,ext:mp4:m4a"])
             .args(["--recode", "mp4"])
             .args(["--paths", &format!("{}/videos", env::current_dir().unwrap().to_string_lossy())])
             .args(["--print", "after_move:[downloaded]:%(id)s.%(ext)s"])
             .args(["--print", "before_dl:[downloading]:%(id)s.%(ext)s"])
             .args(["--output", "%(id)s.%(ext)s"])
+            .args(["--output", "thumbnail:%(id)s.%(ext)s"])
             .stdout(Stdio::piped())
             .spawn()
             .expect("Can't create the yt-dlp process");
@@ -74,16 +76,16 @@ async fn handle_socket(mut socket: ws::WebSocket) {
                 break;
             }
 
+            let trimmed = line.trim().to_string();
+            socket.send(ws::Message::Text(trimmed)).await.ok();
+            line.clear();
+
             match yt_dlp.try_wait() {
                 Ok(Some(code)) => {
                     println!("exit code {code}");
                     break;
                 },
-                Ok(None) => {
-                    let trimmed = line.trim().to_string();
-                    socket.send(ws::Message::Text(trimmed)).await.ok();
-                    line.clear();
-                }
+                Ok(None) => {}
                 Err(code) => {
                     println!("error {code}");
                     break;
